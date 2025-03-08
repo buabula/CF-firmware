@@ -41,20 +41,20 @@
 #define DEBUG_MODULE "APP"
 #include "debug.h"
 
-#define MAX_COORD_VALUE 10000
-#define MIN_COORD_VALUE (-10000)
+#define MAX_COORD_VALUE 1000
+#define MIN_COORD_VALUE (-1000)
 
 #pragma pack(push, 1)
 typedef struct {
     int16_t x;
     int16_t y;
-} sim_position_t; // 仅保留一种打包方式
+} __attribute__((packed)) sim_position_t;// 仅保留一种打包方式
 #pragma pack(pop)
 
 
 // Callback that is called when a CPX packet arrives
 static void cpxPacketCallback(const CPXPacket_t* cpxRx);
-static CPXPacket_t txPacket;
+//static CPXPacket_t txPacket;
 
 
 void appMain() {
@@ -64,32 +64,23 @@ void appMain() {
   // Packets sent to destination=CPX_T_STM32 and function=CPX_F_APP will arrive here
   cpxRegisterAppMessageHandler(cpxPacketCallback);
 
-  uint8_t counter = 0;
+  //uint8_t counter = 0;
   while(1) {
     vTaskDelay(M2T(2000));
 
-    cpxInitRoute(CPX_T_STM32, CPX_T_GAP8, CPX_F_APP, &txPacket.route);
-    txPacket.data[0] = counter;
-    txPacket.dataLength = 1;
-
-    cpxSendPacketBlocking(&txPacket);
-    DEBUG_PRINT("Sent packet to GAP8 (%u)\n", counter);
-    counter++;
-
+    //cpxInitRoute(CPX_T_STM32, CPX_T_GAP8, CPX_F_APP, &txPacket.route);
+    // txPacket.data[0] = counter;
+    // txPacket.dataLength = 1;
+    //cpxSendPacketBlocking(&txPacket);
+    // DEBUG_PRINT("Sent packet to GAP8 (%u)\n", counter);
+    //counter++;
   }
-
-
 }
 
   static void cpxPacketCallback(const CPXPacket_t* cpxRx) {
-    DEBUG_PRINT("Raw data: ");
-    for(int i=0; i<cpxRx->dataLength; i++){
-        DEBUG_PRINT("%02X ", cpxRx->data[i]);
-    }
-    DEBUG_PRINT("\n");
-  
+
   // 检查数据长度是否足够
-  if(cpxRx->dataLength < sizeof(sim_position_t)) {
+  if(cpxRx->dataLength != sizeof(sim_position_t)) {
     DEBUG_PRINT("Invalid coord packet! Length:%d (Expected:%d)\n", 
                cpxRx->dataLength, 
                sizeof(sim_position_t));
@@ -108,10 +99,10 @@ void appMain() {
 
   // 转换并显示实际值
   // 传输时保持整数，显示时添加小数点
-  DEBUG_PRINT("X:%d.%d | Y:%d.%d\n",
+  DEBUG_PRINT("Received:[%d bytes]:X:%d.%d | Y:%d.%d\n",
+           cpxRx->dataLength,
            coord->x / 10, abs(coord->x % 10),
            coord->y / 10, abs(coord->y % 10));
-
   }
 
 
