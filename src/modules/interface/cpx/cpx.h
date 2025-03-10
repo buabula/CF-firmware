@@ -43,6 +43,7 @@ typedef enum {
   CPX_F_CRTP = 3,
   CPX_F_WIFI_CTRL = 4,
   CPX_F_APP = 5,
+  CPX_F_APPZB = 6,
   CPX_F_TEST = 0x0E,
   CPX_F_BOOTLOADER = 0x0F,
   CPX_F_LAST // NEEDS TO BE LAST

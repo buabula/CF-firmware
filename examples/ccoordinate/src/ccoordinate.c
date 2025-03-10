@@ -48,7 +48,7 @@
 typedef struct {
     int16_t x;
     int16_t y;
-} __attribute__((packed)) sim_position_t;// 仅保留一种打包方式
+} __attribute__((packed)) face_position_t;// 仅保留一种打包方式
 #pragma pack(pop)
 
 
@@ -80,15 +80,15 @@ void appMain() {
   static void cpxPacketCallback(const CPXPacket_t* cpxRx) {
 
   // 检查数据长度是否足够
-  if(cpxRx->dataLength != sizeof(sim_position_t)) {
+  if(cpxRx->dataLength != sizeof(face_position_t)) {
     DEBUG_PRINT("Invalid coord packet! Length:%d (Expected:%d)\n", 
                cpxRx->dataLength, 
-               sizeof(sim_position_t));
+               sizeof(face_position_t));
     return;
   }
 
   // 解析数据结构
-  const sim_position_t* coord = (const sim_position_t*)cpxRx->data;
+  const face_position_t* coord = (const face_position_t*)cpxRx->data;
 
   // 数据有效性检查
   if((coord->x < MIN_COORD_VALUE) || (coord->x > MAX_COORD_VALUE) ||
