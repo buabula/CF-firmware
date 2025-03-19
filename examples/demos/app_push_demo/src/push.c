@@ -100,6 +100,7 @@ void appMain()
   paramVarId_t idPositioningDeck = paramGetVarId("deck", "bcFlow2");
   paramVarId_t idMultiranger = paramGetVarId("deck", "bcMultiranger");
 
+  paramVarId_t idAppMode= paramGetVarId("flightmode", "appmode");
 
   float factor = velMax/radius;
 
@@ -113,79 +114,96 @@ void appMain()
 
     uint8_t positioningInit = paramGetUint(idPositioningDeck);
     uint8_t multirangerInit = paramGetUint(idMultiranger);
-
+    uint8_t appModeEnabled = paramGetUint(idAppMode);
+    static bool Flag = false;
     uint16_t up = logGetUint(idUp);
 
-    if (state == unlocked) {
-      uint16_t left = logGetUint(idLeft);
-      uint16_t right = logGetUint(idRight);
-      uint16_t front = logGetUint(idFront);
-      uint16_t back = logGetUint(idBack);
+    if (appModeEnabled) { 
 
-      uint16_t left_o = radius - MIN(left, radius);
-      uint16_t right_o = radius - MIN(right, radius);
-      float l_comp = (-1) * left_o * factor;
-      float r_comp = right_o * factor;
-      float velSide = r_comp + l_comp;
+        if (state == unlocked) {
+          uint16_t left = logGetUint(idLeft);
+          uint16_t right = logGetUint(idRight);
+          uint16_t front = logGetUint(idFront);
+          uint16_t back = logGetUint(idBack);
 
-      uint16_t front_o = radius - MIN(front, radius);
-      uint16_t back_o = radius - MIN(back, radius);
-      float f_comp = (-1) * front_o * factor;
-      float b_comp = back_o * factor;
-      float velFront = b_comp + f_comp;
+          uint16_t left_o = radius - MIN(left, radius);
+          uint16_t right_o = radius - MIN(right, radius);
+          float l_comp = (-1) * left_o * factor;
+          float r_comp = right_o * factor;
+          float velSide = r_comp + l_comp;
 
-      // we want to go up when there are obstacles (hands) closer than radius_up_down on both sides
-      if(left < radius_up_down && right < radius_up_down)
-      {
-        height_sp += up_down_delta;
+          uint16_t front_o = radius - MIN(front, radius);
+          uint16_t back_o = radius - MIN(back, radius);
+          float f_comp = (-1) * front_o * factor;
+          float b_comp = back_o * factor;
+          float velFront = b_comp + f_comp;
+
+          // we want to go up when there are obstacles (hands) closer than radius_up_down on both sides
+          if(left < radius_up_down && right < radius_up_down)
+          {
+            height_sp += up_down_delta;
+          }
+
+          // we want to go down when there are obstacles (hands) closer than radius_up_down in front and back (or there is something on top)
+          if((front < radius_up_down && back < radius_up_down) || up < radius)
+          {
+            height_sp -= up_down_delta;
+          }
+
+          uint16_t up_o = radius - MIN(up, radius);
+          float height = height_sp - up_o/1000.0f;
+
+
+          /*DEBUG_PRINT("l=%i, r=%i, lo=%f, ro=%f, vel=%f\n", left_o, right_o, l_comp, r_comp, velSide);
+          DEBUG_PRINT("f=%i, b=%i, fo=%f, bo=%f, vel=%f\n", front_o, back_o, f_comp, b_comp, velFront);
+          DEBUG_PRINT("u=%i, d=%i, height=%f\n", up_o, height);*/
+
+          if (1) {
+            setHoverSetpoint(&setpoint, velFront, velSide, height, 0);
+            commanderSetSetpoint(&setpoint, 3);
+          }
+
+          if (height < 0.1f) {
+            state = stopping;
+            DEBUG_PRINT("X\n");
+          }
+
+        } else {
+
+          if (state == stopping && up > stoppedTh) {
+            DEBUG_PRINT("%i", up);
+            state = idle;
+            DEBUG_PRINT("S\n");
+          }
+
+          if (up < unlockThLow && state == idle && up > 0.001f) {
+            DEBUG_PRINT("Waiting for hand to be removed!\n");
+            state = lowUnlock;
+          }
+
+          if (up > unlockThHigh && state == lowUnlock && positioningInit && multirangerInit) {
+            DEBUG_PRINT("Unlocked!\n");
+            state = unlocked;
+          }
+
+          if (state == idle || state == stopping) {
+            memset(&setpoint, 0, sizeof(setpoint_t));
+            commanderSetSetpoint(&setpoint, 3);
+          }
+        }
+        Flag=true;
+        DEBUG_PRINT("Flag=TRUE (进入控制模式)\n"); 
+  }else{ 
+      if(Flag == true){
+        DEBUG_PRINT("Flag=TRUE -> 即将释放优先级\n"); 
+        commanderRelaxPriority();
+        Flag=false;
+        DEBUG_PRINT("Flag=FALSE (已释放优先级)\n");  
+      }
+      vTaskDelay(M2T(2000));
+      DEBUG_PRINT("Hello World!\n");
       }
 
-      // we want to go down when there are obstacles (hands) closer than radius_up_down in front and back (or there is something on top)
-      if((front < radius_up_down && back < radius_up_down) || up < radius)
-      {
-        height_sp -= up_down_delta;
-      }
 
-      uint16_t up_o = radius - MIN(up, radius);
-      float height = height_sp - up_o/1000.0f;
-
-
-      /*DEBUG_PRINT("l=%i, r=%i, lo=%f, ro=%f, vel=%f\n", left_o, right_o, l_comp, r_comp, velSide);
-      DEBUG_PRINT("f=%i, b=%i, fo=%f, bo=%f, vel=%f\n", front_o, back_o, f_comp, b_comp, velFront);
-      DEBUG_PRINT("u=%i, d=%i, height=%f\n", up_o, height);*/
-
-      if (1) {
-        setHoverSetpoint(&setpoint, velFront, velSide, height, 0);
-        commanderSetSetpoint(&setpoint, 3);
-      }
-
-      if (height < 0.1f) {
-        state = stopping;
-        DEBUG_PRINT("X\n");
-      }
-
-    } else {
-
-      if (state == stopping && up > stoppedTh) {
-        DEBUG_PRINT("%i", up);
-        state = idle;
-        DEBUG_PRINT("S\n");
-      }
-
-      if (up < unlockThLow && state == idle && up > 0.001f) {
-        DEBUG_PRINT("Waiting for hand to be removed!\n");
-        state = lowUnlock;
-      }
-
-      if (up > unlockThHigh && state == lowUnlock && positioningInit && multirangerInit) {
-        DEBUG_PRINT("Unlocked!\n");
-        state = unlocked;
-      }
-
-      if (state == idle || state == stopping) {
-        memset(&setpoint, 0, sizeof(setpoint_t));
-        commanderSetSetpoint(&setpoint, 3);
-      }
-    }
   }
 }

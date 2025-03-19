@@ -77,6 +77,7 @@ static YawModeType yawMode = DEFAULT_YAW_MODE; // Yaw mode configuration
 static bool thrustLocked = true;
 static bool altHoldMode = false;
 static bool posHoldMode = false;
+static bool appMode = false;
 static bool posSetMode = false;
 static bool modeSet = false;
 
@@ -246,6 +247,9 @@ PARAM_ADD_CORE(PARAM_UINT8, althold, &altHoldMode)
  * X and U
  */
 PARAM_ADD_CORE(PARAM_UINT8, poshold, &posHoldMode)
+
+
+PARAM_ADD_CORE(PARAM_UINT8, appmode, &appMode)
 
 /**
  * @brief Set to nonzero to select absolute mode for positioning
