@@ -34,51 +34,124 @@
 #include "app.h"
 #include "cpx.h"
 #include "cpx_internal_router.h"
+#include "commander.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
 
-#define DEBUG_MODULE "APP"
+#define DEBUG_MODULE "CCOO"
 #include "debug.h"
+
+#include "log.h"
+#include "param.h"
+
 
 #define MAX_COORD_VALUE 1000
 #define MIN_COORD_VALUE (-1000)
 
+
+#define FLIGHT_DURATION_MS 10000
+
+static TickType_t flightStartTime = 0;
+
+typedef enum {
+  unlocked,
+  stopping,
+  idle
+} State;
+
+static State state = idle;
+
+static void setHoverSetpoint(setpoint_t *setpoint, float vx, float vy, float z, float yawrate)
+{
+  setpoint->mode.z = modeAbs;
+  setpoint->position.z = z;
+  setpoint->mode.yaw = modeVelocity;
+  setpoint->attitudeRate.yaw = yawrate;
+  setpoint->mode.x = modeVelocity;
+  setpoint->mode.y = modeVelocity;
+  setpoint->velocity.x = vx;
+  setpoint->velocity.y = vy;
+  setpoint->velocity_body = true;
+}
+
+//data packed
 #pragma pack(push, 1)
 typedef struct {
     int16_t x;
     int16_t y;
-} __attribute__((packed)) face_position_t;// 仅保留一种打包方式
+} __attribute__((packed)) face_position_t;
 #pragma pack(pop)
-
-
-// Callback that is called when a CPX packet arrives
 static void cpxPacketCallback(const CPXPacket_t* cpxRx);
-//static CPXPacket_t txPacket;
+
 
 
 void appMain() {
+  vTaskDelay(M2T(100));
+  cpxRegisterAppMessageHandler(cpxPacketCallback);
   DEBUG_PRINT("Coordinate receiver ready\n");
 
-  // Register a callback for CPX packets.
-  // Packets sent to destination=CPX_T_STM32 and function=CPX_F_APP will arrive here
-  cpxRegisterAppMessageHandler(cpxPacketCallback);
+  static setpoint_t setpoint;
+  paramVarId_t idPositioningDeck = paramGetVarId("deck", "bcFlow2");
+  paramVarId_t idAppMode= paramGetVarId("flightmode", "appmode");
 
-  //uint8_t counter = 0;
   while(1) {
-    vTaskDelay(M2T(2000));
 
-    //cpxInitRoute(CPX_T_STM32, CPX_T_GAP8, CPX_F_APP, &txPacket.route);
-    // txPacket.data[0] = counter;
-    // txPacket.dataLength = 1;
-    //cpxSendPacketBlocking(&txPacket);
-    // DEBUG_PRINT("Sent packet to GAP8 (%u)\n", counter);
-    //counter++;
+    uint8_t positioningInit = paramGetUint(idPositioningDeck);
+    uint8_t appModeEnabled = paramGetUint(idAppMode);
+    static bool Flag = false;
+    static bool Flag2 = false;
+    vTaskDelay(M2T(10));
+
+
+    if (appModeEnabled) { 
+      
+      if (state == unlocked) {
+
+        if (1) {
+        setHoverSetpoint(&setpoint, 0, 0, 0.4f, 0);
+        commanderSetSetpoint(&setpoint, 3);
+        }
+
+        if (xTaskGetTickCount() - flightStartTime > pdMS_TO_TICKS(FLIGHT_DURATION_MS)) {
+          state = stopping;
+          memset(&setpoint, 0, sizeof(setpoint_t));
+          commanderSetSetpoint(&setpoint, 3);
+          Flag2 = true;
+          DEBUG_PRINT("Stopping!\n");
+         }
+
+      } else {
+
+        if (state == stopping) {
+          DEBUG_PRINT("Stopping!!!\n");
+          vTaskDelay(M2T(1000));
+        }
+
+        if (state == idle && positioningInit) {
+          DEBUG_PRINT("Unlocked!\n");
+          state = unlocked;
+          if(Flag2 == false){
+          flightStartTime = xTaskGetTickCount(); }
+        }
+
+        
+
+      }
+      Flag = true;
+      Flag2 = false;
+    }else{ 
+      if(Flag == true){
+        commanderRelaxPriority();
+        Flag=false;
+        DEBUG_PRINT("Flag=FALSE (已释放优先级)\n");  
+      }
+    }
+    vTaskDelay(M2T(10));
   }
 }
 
   static void cpxPacketCallback(const CPXPacket_t* cpxRx) {
-
   // 检查数据长度是否足够
   if(cpxRx->dataLength != sizeof(face_position_t)) {
     DEBUG_PRINT("Invalid coord packet! Length:%d (Expected:%d)\n", 

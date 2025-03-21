@@ -99,8 +99,8 @@ void appMain()
   
   paramVarId_t idPositioningDeck = paramGetVarId("deck", "bcFlow2");
   paramVarId_t idMultiranger = paramGetVarId("deck", "bcMultiranger");
-
   paramVarId_t idAppMode= paramGetVarId("flightmode", "appmode");
+  
 
   float factor = velMax/radius;
 
