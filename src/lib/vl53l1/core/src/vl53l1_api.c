@@ -983,7 +983,8 @@ static VL53L1_Error SetPresetMode(VL53L1_DEV Dev,
 VL53L1_Error VL53L1_SetPresetMode(VL53L1_DEV Dev, VL53L1_PresetModes PresetMode)
 {
 	VL53L1_Error Status = VL53L1_ERROR_NONE;
-	VL53L1_DistanceModes DistanceMode = VL53L1_DISTANCEMODE_LONG;
+	//VL53L1_DistanceModes DistanceMode = VL53L1_DISTANCEMODE_LONG;
+	VL53L1_DistanceModes DistanceMode = VL53L1_DISTANCEMODE_SHORT;
 
 	LOG_FUNCTION_START("%d", (int)PresetMode);
 
@@ -999,11 +1000,16 @@ VL53L1_Error VL53L1_SetPresetMode(VL53L1_DEV Dev, VL53L1_PresetModes PresetMode)
 		PALDevDataSet(Dev, CurrentParameters.NewDistanceMode,
 				DistanceMode);
 
+	//	if ((PresetMode == VL53L1_PRESETMODE_LITE_RANGING) ||
+	//		(PresetMode == VL53L1_PRESETMODE_AUTONOMOUS) ||
+	//		(PresetMode == VL53L1_PRESETMODE_LOWPOWER_AUTONOMOUS))
+	//		Status = VL53L1_SetMeasurementTimingBudgetMicroSeconds(
+	//			Dev, 41000);
 		if ((PresetMode == VL53L1_PRESETMODE_LITE_RANGING) ||
 			(PresetMode == VL53L1_PRESETMODE_AUTONOMOUS) ||
 			(PresetMode == VL53L1_PRESETMODE_LOWPOWER_AUTONOMOUS))
 			Status = VL53L1_SetMeasurementTimingBudgetMicroSeconds(
-				Dev, 41000);
+				Dev, 66666);
 		else
 			/* Set default timing budget to 30Hz (33.33 ms)*/
 			Status = VL53L1_SetMeasurementTimingBudgetMicroSeconds(

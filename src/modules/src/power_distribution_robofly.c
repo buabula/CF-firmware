@@ -169,15 +169,19 @@ void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motor
   flapperConfig.rollBias=limitRollBias(flapperConfig.rollBias);
 
   #if CONFIG_POWER_DISTRIBUTION_FLAPPER_REVB
-    motorThrustUncapped->motors.m1 = flapperConfig.pitchServoNeutral * act_max / 100.0f + pitch_ampl * control->pitch; // pitch servo
+    motorThrustUncapped->motors.m1 = flapperConfig.pitchServoNeutral * act_max / 100.0f - pitch_ampl * control->pitch; // pitch servo
     motorThrustUncapped->motors.m3 = flapperConfig.yawServoNeutral*act_max / 100.0f + control->yaw; // yaw servo
     motorThrustUncapped->motors.m2 =  0.5f * control->roll + thrust * (1.0f + flapperConfig.rollBias / 100.0f); // left motor
     motorThrustUncapped->motors.m4 = -0.5f * control->roll + thrust * (1.0f - flapperConfig.rollBias / 100.0f); // right motor
   #else
-    motorThrustUncapped->motors.m3 = flapperConfig.pitchServoNeutral*act_max / 100.0f + pitch_ampl * control->pitch; // pitch servo
+    motorThrustUncapped->motors.m3 = flapperConfig.pitchServoNeutral*act_max / 100.0f - pitch_ampl * control->pitch; // pitch servo
     motorThrustUncapped->motors.m2 = flapperConfig.yawServoNeutral*act_max / 100.0f + control->yaw; // yaw servo
-    motorThrustUncapped->motors.m1 =  0.5f * control->roll + thrust * (1.0f + flapperConfig.rollBias / 100.0f); // left motor
-    motorThrustUncapped->motors.m4 = -0.5f * control->roll + thrust * (1.0f - flapperConfig.rollBias / 100.0f); // right motor
+    motorThrustUncapped->motors.m4 =  0.5f * control->roll + thrust * (1.0f + flapperConfig.rollBias / 100.0f); // left motor
+    motorThrustUncapped->motors.m1 = -0.5f * control->roll + thrust * (1.0f - flapperConfig.rollBias / 100.0f); // right motor
+ //   motorThrustUncapped->motors.m3 = flapperConfig.pitchServoNeutral*act_max / 100.0f - pitch_ampl * control->pitch; // pitch servo
+ //   motorThrustUncapped->motors.m2 = flapperConfig.yawServoNeutral*act_max / 100.0f + control->yaw; // yaw servo
+ //   motorThrustUncapped->motors.m1 =  0.5f * control->roll + thrust * (1.0f + flapperConfig.rollBias / 100.0f); // left motor
+ //   motorThrustUncapped->motors.m4 = -0.5f * control->roll + thrust * (1.0f - flapperConfig.rollBias / 100.0f); // right motor
   #endif
 }
 
@@ -193,8 +197,12 @@ bool powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUnca
   #else
     motorPwm->motors.m3 = limitThrust(motorThrustBatCompUncapped->motors.m3, 0, UINT16_MAX, &isCapped); // pitch servo
     motorPwm->motors.m2 = limitThrust(motorThrustBatCompUncapped->motors.m2, 0, UINT16_MAX, &isCapped); // yaw servo
-    motorPwm->motors.m1 = limitThrust(motorThrustBatCompUncapped->motors.m1, idleThrust, UINT16_MAX, &isCapped); // left motor 
-    motorPwm->motors.m4 = limitThrust(motorThrustBatCompUncapped->motors.m4, idleThrust, UINT16_MAX, &isCapped); // right motor
+    motorPwm->motors.m4 = limitThrust(motorThrustBatCompUncapped->motors.m4, idleThrust, UINT16_MAX, &isCapped); // left motor 
+    motorPwm->motors.m1 = limitThrust(motorThrustBatCompUncapped->motors.m1, idleThrust, UINT16_MAX, &isCapped); // right motor
+ //   motorPwm->motors.m3 = limitThrust(motorThrustBatCompUncapped->motors.m3, 0, UINT16_MAX, &isCapped); // pitch servo
+ //   motorPwm->motors.m2 = limitThrust(motorThrustBatCompUncapped->motors.m2, 0, UINT16_MAX, &isCapped); // yaw servo
+ //   motorPwm->motors.m1 = limitThrust(motorThrustBatCompUncapped->motors.m1, idleThrust, UINT16_MAX, &isCapped); // left motor 
+ //   motorPwm->motors.m4 = limitThrust(motorThrustBatCompUncapped->motors.m4, idleThrust, UINT16_MAX, &isCapped); // right motor
   #endif
 
   return isCapped;
